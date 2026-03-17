@@ -1,21 +1,10 @@
-import logging
-
 from ddtrace.contrib.asgi import TraceMiddleware
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from app.powertools import logger
 from app.routes.health import router as health_router
 from app.routes.items import router as items_router
-
-# ---------------------------------------------------------------------------
-# Structured logging — Lambda captures stdout as JSON when using Powertools or
-# plain logging; ddtrace injects trace/span IDs automatically.
-# ---------------------------------------------------------------------------
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s [%(name)s] [dd.trace_id=%(dd.trace_id)s dd.span_id=%(dd.span_id)s] %(message)s",
-)
-logger = logging.getLogger(__name__)
 
 
 def create_app() -> FastAPI:
@@ -33,6 +22,22 @@ def create_app() -> FastAPI:
     application.add_middleware(TraceMiddleware)
 
     # ------------------------------------------------------------------
+    # Powertools correlation ID — appends the API Gateway request ID to
+    # every log record emitted during the request lifecycle so that logs
+    # can be correlated across services.
+    # ------------------------------------------------------------------
+    @application.middleware("http")
+    async def powertools_correlation_id(request: Request, call_next):
+        correlation_id = request.headers.get("x-amzn-requestid") or request.headers.get(
+            "x-request-id"
+        )
+        if correlation_id:
+            logger.set_correlation_id(correlation_id)
+        response = await call_next(request)
+        logger.set_correlation_id(None)
+        return response
+
+    # ------------------------------------------------------------------
     # Routers
     # ------------------------------------------------------------------
     application.include_router(health_router)
@@ -40,11 +45,11 @@ def create_app() -> FastAPI:
 
     # ------------------------------------------------------------------
     # Global exception handler — log unexpected errors so they show up in
-    # Datadog Logs correlated with the active trace.
+    # Datadog Logs and Powertools structured logs correlated with the trace.
     # ------------------------------------------------------------------
     @application.exception_handler(Exception)
     async def unhandled_exception_handler(request: Request, exc: Exception):
-        logger.exception("Unhandled exception: %s", exc)
+        logger.exception("Unhandled exception", exc_info=exc)
         return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
     return application

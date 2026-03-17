@@ -22,9 +22,11 @@ AWS Lambda  (Python 3.12)
 
 | Signal  | Tool |
 |---------|------|
-| Traces  | `ddtrace` + Datadog Lambda Layer |
-| Metrics | Enhanced Lambda Metrics via `datadog-lambda` |
-| Logs    | Structured logs correlated to traces via `DD_LOGS_INJECTION=true` |
+| Traces (APM) | `ddtrace` + Datadog Lambda Layer |
+| Traces (X-Ray) | Powertools `Tracer` + AWS X-Ray active tracing |
+| Metrics (Datadog) | Enhanced Lambda Metrics via `datadog-lambda` |
+| Metrics (CloudWatch) | Powertools `Metrics` via EMF (Embedded Metrics Format) |
+| Logs | Powertools `Logger` (structured JSON) correlated to traces via `DD_LOGS_INJECTION=true` |
 
 ---
 
@@ -152,6 +154,7 @@ Interactive docs are available at `/docs` (Swagger UI) and `/redoc`.
 │   ├── __init__.py
 │   ├── handler.py          # Lambda entry-point
 │   ├── main.py             # FastAPI app factory
+│   ├── powertools.py       # Shared Logger, Tracer, Metrics singletons
 │   └── routes/
 │       ├── __init__.py
 │       ├── health.py
@@ -173,6 +176,60 @@ Interactive docs are available at `/docs` (Swagger UI) and `/redoc`.
 
 > **`requirements.txt` is auto-generated** by `uv export` and should not be edited by hand.  
 > Run `make export-requirements` after changing dependencies in `pyproject.toml`.
+
+---
+
+## AWS Lambda Powertools
+
+[AWS Lambda Powertools for Python](https://docs.powertools.aws.dev/lambda/python/latest/) is integrated via `app/powertools.py`, which exposes three shared singletons imported throughout the application:
+
+### Logger
+
+Powertools `Logger` replaces stdlib logging and outputs structured JSON on every invocation:
+
+```json
+{
+  "level": "INFO",
+  "location": "list_items:app/routes/items.py:23",
+  "message": "Listing items",
+  "item_count": 3,
+  "service": "lambda-python-datadog",
+  "cold_start": true,
+  "function_name": "lambda-python-datadog-dev-api",
+  "correlation_id": "abc-123"
+}
+```
+
+The `@logger.inject_lambda_context` decorator on the handler automatically appends `cold_start`, `function_name`, `function_arn`, and `request_id` to every log line.  
+The FastAPI correlation-ID middleware in `app/main.py` forwards the API Gateway `x-amzn-requestid` header so all logs within a request share the same `correlation_id`.
+
+### Tracer
+
+Powertools `Tracer` adds AWS X-Ray segments:
+
+- `@tracer.capture_lambda_handler` — root X-Ray segment for the whole invocation
+- `@tracer.capture_method` — subsegment per route function (`health_check`, `list_items`, `get_item`, `create_item`, `delete_item`)
+
+X-Ray active tracing is enabled in `serverless.yml` (`tracing.lambda: true`).
+
+### Metrics
+
+Powertools `Metrics` flushes [CloudWatch Embedded Metrics Format (EMF)](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch_Embedded_Metric_Format.html) JSON after every invocation via `@metrics.log_metrics`. Custom metrics can be added anywhere:
+
+```python
+from app.powertools import metrics
+from aws_lambda_powertools.metrics import MetricUnit
+
+metrics.add_metric(name="ItemsCreated", unit=MetricUnit.Count, value=1)
+```
+
+### Environment variables (set in `serverless.yml`)
+
+| Variable | Value |
+|----------|-------|
+| `POWERTOOLS_SERVICE_NAME` | `lambda-python-datadog` |
+| `POWERTOOLS_LOG_LEVEL` | `INFO` |
+| `POWERTOOLS_METRICS_NAMESPACE` | `LambdaPythonDatadog` |
 
 ---
 

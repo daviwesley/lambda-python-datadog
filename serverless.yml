@@ -58,6 +58,14 @@ provider:
     DD_TRACE_ENABLED: "true"
     DD_LOGS_INJECTION: "true"        # injects trace/span IDs into log lines
 
+    # AWS Lambda Powertools
+    POWERTOOLS_SERVICE_NAME: ${self:service}
+    POWERTOOLS_LOG_LEVEL: INFO
+    POWERTOOLS_METRICS_NAMESPACE: LambdaPythonDatadog
+
+  tracing:
+    lambda: true                     # enables AWS X-Ray active tracing (used by Powertools Tracer)
+
   iam:
     role:
       statements:
@@ -68,6 +76,12 @@ provider:
             - logs:CreateLogStream
             - logs:PutLogEvents
           Resource: "arn:aws:logs:*:*:*"
+        # Allow Powertools Tracer to write X-Ray segments
+        - Effect: Allow
+          Action:
+            - xray:PutTraceSegments
+            - xray:PutTelemetryRecords
+          Resource: "*"
 
 # ---------------------------------------------------------------------------
 # Package

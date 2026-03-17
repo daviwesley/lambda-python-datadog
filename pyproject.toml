@@ -10,6 +10,7 @@ dependencies = [
     "uvicorn==0.42.0",
     "ddtrace==4.6.0",
     "datadog-lambda==8.123.0",
+    "aws-lambda-powertools[tracer]==3.25.0",
 ]
 
 [tool.uv]
