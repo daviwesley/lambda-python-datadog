@@ -1,0 +1,9 @@
+# Runtime dependencies (bundled into the Lambda deployment package)
+fastapi==0.135.1
+mangum==0.21.0
+pydantic==2.12.5
+uvicorn==0.42.0
+
+# Datadog observability
+ddtrace==4.6.0
+datadog-lambda==8.123.0

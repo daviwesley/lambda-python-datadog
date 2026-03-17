@@ -1,0 +1,11 @@
+{
+  "name": "lambda-python-datadog",
+  "description": "FastAPI Lambda with Datadog observability",
+  "version": "1.0.0",
+  "private": true,
+  "devDependencies": {
+    "serverless": "^3.40.0",
+    "serverless-plugin-datadog": "^5.133.0",
+    "serverless-python-requirements": "^6.1.1"
+  }
+}
