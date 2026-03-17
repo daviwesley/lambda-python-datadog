@@ -62,6 +62,9 @@ provider:
     POWERTOOLS_SERVICE_NAME: ${self:service}
     POWERTOOLS_LOG_LEVEL: INFO
     POWERTOOLS_METRICS_NAMESPACE: LambdaPythonDatadog
+    # Do not capture HTTP response bodies in X-Ray — Datadog APM already
+    # captures them via TraceMiddleware, so this avoids redundant storage.
+    POWERTOOLS_TRACER_CAPTURE_RESPONSE: "false"
 
   tracing:
     lambda: true                     # enables AWS X-Ray active tracing (used by Powertools Tracer)

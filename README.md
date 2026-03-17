@@ -183,6 +183,26 @@ Interactive docs are available at `/docs` (Swagger UI) and `/redoc`.
 
 [AWS Lambda Powertools for Python](https://docs.powertools.aws.dev/lambda/python/latest/) is integrated via `app/powertools.py`, which exposes three shared singletons imported throughout the application:
 
+### Dual-tracer architecture: Powertools Tracer + Datadog TraceMiddleware
+
+Both tracers are intentionally active **at the same time** because they target completely different backends:
+
+| Tracer | Backend | What it captures |
+|--------|---------|-----------------|
+| `ddtrace` `TraceMiddleware` | **Datadog APM** | HTTP request spans visible in Datadog APM → Services |
+| Powertools `Tracer` | **AWS X-Ray** | Lambda invocation segments + per-route subsegments in the AWS X-Ray console |
+
+They do **not** conflict because they write to independent sinks.  However, to prevent *double-patching* of shared libraries (both `aws-xray-sdk` and `ddtrace` would otherwise monkey-patch `boto3`, `requests`, `httpx`, etc.), the Powertools `Tracer` is initialised with `patch_modules=[]`:
+
+```python
+# app/powertools.py
+tracer = Tracer(patch_modules=[])   # library patching is left entirely to ddtrace
+```
+
+This means:
+- **`ddtrace`** instruments all library calls (boto3, requests, httpx, …) → Datadog APM spans
+- **Powertools Tracer** only creates structural X-Ray segments via its decorators → X-Ray subsegments
+
 ### Logger
 
 Powertools `Logger` replaces stdlib logging and outputs structured JSON on every invocation:
@@ -212,6 +232,8 @@ Powertools `Tracer` adds AWS X-Ray segments:
 
 X-Ray active tracing is enabled in `serverless.yml` (`tracing.lambda: true`).
 
+> **Local development / tests** — set `POWERTOOLS_TRACE_DISABLED=true` to silence X-Ray calls when no daemon is running.  This is already pre-configured in `pytest.ini` and in the `make run` target.
+
 ### Metrics
 
 Powertools `Metrics` flushes [CloudWatch Embedded Metrics Format (EMF)](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch_Embedded_Metric_Format.html) JSON after every invocation via `@metrics.log_metrics`. Custom metrics can be added anywhere:
@@ -225,11 +247,13 @@ metrics.add_metric(name="ItemsCreated", unit=MetricUnit.Count, value=1)
 
 ### Environment variables (set in `serverless.yml`)
 
-| Variable | Value |
-|----------|-------|
-| `POWERTOOLS_SERVICE_NAME` | `lambda-python-datadog` |
-| `POWERTOOLS_LOG_LEVEL` | `INFO` |
-| `POWERTOOLS_METRICS_NAMESPACE` | `LambdaPythonDatadog` |
+| Variable | Value | Purpose |
+|----------|-------|---------|
+| `POWERTOOLS_SERVICE_NAME` | `lambda-python-datadog` | Tags every log/trace/metric |
+| `POWERTOOLS_LOG_LEVEL` | `INFO` | Minimum log level |
+| `POWERTOOLS_METRICS_NAMESPACE` | `LambdaPythonDatadog` | CloudWatch namespace |
+| `POWERTOOLS_TRACER_CAPTURE_RESPONSE` | `false` | Skip response capture in X-Ray (Datadog already captures it) |
+| `POWERTOOLS_TRACE_DISABLED` | *(unset in prod)* | Set `true` locally / in tests |
 
 ---
 
