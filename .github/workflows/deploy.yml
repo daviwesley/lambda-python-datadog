@@ -1,0 +1,104 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+
+# One deployment at a time — cancel any in-progress run for the same ref.
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Deploy to dev — triggered on every push to main
+  # ---------------------------------------------------------------------------
+  deploy-dev:
+    if: github.ref == 'refs/heads/main'
+    name: Deploy → dev
+    runs-on: ubuntu-latest
+    environment: dev
+    permissions:
+      contents: read
+      deployments: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up uv and Python 3.12
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Python dependencies
+        run: uv sync
+
+      - name: Install Node.js dependencies
+        run: npm install
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+
+      - name: Deploy to dev
+        run: make deploy STAGE=dev REGION=${{ vars.AWS_REGION || 'us-east-1' }}
+        env:
+          DD_API_KEY_SECRET_ARN: ${{ secrets.DD_API_KEY_SECRET_ARN }}
+          DD_SITE: ${{ vars.DD_SITE }}
+          APP_VERSION: ${{ github.sha }}
+
+  # ---------------------------------------------------------------------------
+  # Deploy to prod — triggered on a semver tag (e.g. v1.2.3)
+  # ---------------------------------------------------------------------------
+  deploy-prod:
+    if: startsWith(github.ref, 'refs/tags/v')
+    name: Deploy → prod
+    runs-on: ubuntu-latest
+    environment: prod
+    permissions:
+      contents: read
+      deployments: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up uv and Python 3.12
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Python dependencies
+        run: uv sync
+
+      - name: Install Node.js dependencies
+        run: npm install
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+
+      - name: Deploy to prod
+        run: make deploy-prod REGION=${{ vars.AWS_REGION || 'us-east-1' }}
+        env:
+          DD_API_KEY_SECRET_ARN: ${{ secrets.DD_API_KEY_SECRET_ARN }}
+          DD_SITE: ${{ vars.DD_SITE }}
+          APP_VERSION: ${{ github.ref_name }}

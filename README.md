@@ -180,6 +180,78 @@ make remove STAGE=dev
 
 ---
 
+## CI/CD (GitHub Actions)
+
+Two workflows are included in `.github/workflows/`:
+
+| Workflow | File | Trigger |
+|----------|------|---------|
+| **CI** | `ci.yml` | Every push and pull request |
+| **Deploy** | `deploy.yml` | Push to `main` → `dev`; tag `v*` → `prod` |
+
+### Required GitHub Secrets
+
+Navigate to **Settings → Secrets and variables → Actions** in your repository and add:
+
+| Secret | Description |
+|--------|-------------|
+| `AWS_ACCESS_KEY_ID` | AWS IAM access key with Lambda / CloudFormation deploy permissions |
+| `AWS_SECRET_ACCESS_KEY` | Corresponding AWS IAM secret key |
+| `DD_API_KEY_SECRET_ARN` | ARN of the AWS Secrets Manager secret holding your Datadog API key |
+
+### Required GitHub Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DD_SITE` | Datadog ingest site (e.g. `datadoghq.com`) | _(none — must be set)_ |
+| `AWS_REGION` | AWS region to deploy to | `us-east-1` |
+
+### Deployment flow
+
+```
+push to main  ─────────────────► deploy to dev  (APP_VERSION = git SHA)
+push tag v1.2.3  ──────────────► deploy to prod (APP_VERSION = v1.2.3)
+```
+
+The `dev` and `prod` jobs use GitHub [Environments](https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment), so you can add deployment protection rules (e.g. require a manual approval before prod).
+
+### Minimum IAM permissions
+
+The IAM user referenced by the AWS secrets needs the following permissions to deploy:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "cloudformation:*",
+        "s3:*",
+        "lambda:*",
+        "apigateway:*",
+        "iam:GetRole",
+        "iam:CreateRole",
+        "iam:DeleteRole",
+        "iam:PutRolePolicy",
+        "iam:DeleteRolePolicy",
+        "iam:AttachRolePolicy",
+        "iam:DetachRolePolicy",
+        "iam:PassRole",
+        "logs:DescribeLogGroups",
+        "logs:CreateLogGroup",
+        "logs:DeleteLogGroup",
+        "logs:PutRetentionPolicy",
+        "secretsmanager:GetSecretValue"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+```
+
+---
+
 ## API reference
 
 | Method | Path | Description |
@@ -198,6 +270,10 @@ Interactive docs are available at `/docs` (Swagger UI) and `/redoc`.
 
 ```
 .
+├── .github/
+│   └── workflows/
+│       ├── ci.yml              # Lint + test on every push/PR
+│       └── deploy.yml          # Deploy to dev (main) / prod (v* tags)
 ├── app/
 │   ├── __init__.py
 │   ├── handler.py          # Lambda entry-point
