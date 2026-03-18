@@ -1,6 +1,6 @@
 """Shared AWS Lambda Powertools singletons.
 
-Import Logger and Metrics from this module throughout the application to ensure
+Import Logger from this module throughout the application to ensure
 a single, consistently configured instance of each utility.
 
 Tracing is handled exclusively by Datadog APM via ``ddtrace`` and the
@@ -10,7 +10,6 @@ used.
 Environment variables (set in serverless.yml):
   POWERTOOLS_SERVICE_NAME      — service name tag on every log/metric
   POWERTOOLS_LOG_LEVEL         — log level (DEBUG / INFO / WARNING / ERROR)
-  POWERTOOLS_METRICS_NAMESPACE — CloudWatch namespace for EMF metrics
 """
 
 from aws_lambda_powertools import Logger

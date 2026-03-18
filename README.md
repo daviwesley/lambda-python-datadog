@@ -322,17 +322,6 @@ Powertools `Logger` replaces stdlib logging and outputs structured JSON on every
 The `@logger.inject_lambda_context` decorator on the handler automatically appends `cold_start`, `function_name`, `function_arn`, and `request_id` to every log line.  
 The FastAPI correlation-ID middleware in `app/main.py` forwards the API Gateway `x-amzn-requestid` header so all logs within a request share the same `correlation_id`.
 
-### Metrics
-
-Powertools `Metrics` flushes [CloudWatch Embedded Metrics Format (EMF)](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch_Embedded_Metric_Format.html) JSON after every invocation via `@metrics.log_metrics`. Custom metrics can be added anywhere:
-
-```python
-from app.powertools import metrics
-from aws_lambda_powertools.metrics import MetricUnit
-
-metrics.add_metric(name="ItemsCreated", unit=MetricUnit.Count, value=1)
-```
-
 ### Environment variables (set in `serverless.yml`)
 
 | Variable | Value | Purpose |

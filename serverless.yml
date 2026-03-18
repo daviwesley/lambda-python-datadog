@@ -61,7 +61,6 @@ provider:
     # AWS Lambda Powertools
     POWERTOOLS_SERVICE_NAME: ${self:service}
     POWERTOOLS_LOG_LEVEL: INFO
-    POWERTOOLS_METRICS_NAMESPACE: LambdaPythonDatadog
 
   iam:
     role:
