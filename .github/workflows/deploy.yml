@@ -57,7 +57,7 @@ jobs:
       - name: Deploy to dev
         run: make deploy STAGE=dev REGION=${{ vars.AWS_REGION || 'us-east-1' }}
         env:
-          DD_API_KEY: ${{ vars.DD_API_KEY }}
+          DD_API_KEY: ${{ secrets.DD_API_KEY }}
           DD_SITE: ${{ vars.DD_SITE }}
           APP_VERSION: ${{ github.sha }}
 
