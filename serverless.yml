@@ -22,7 +22,6 @@ custom:
     strip: false              # keep native library symbols (needed by ddtrace)
     useStaticCache: true
     useDownloadCache: true
-    dockerBuildCmdExtraArgs: "--platform=linux/arm64"  # match Lambda architecture
 
   # ---- Datadog plugin -------------------------------------------------------
   # The plugin automatically adds the Datadog Lambda layer and injects the
@@ -45,7 +44,6 @@ custom:
 provider:
   name: aws
   runtime: python3.12
-  architecture: arm64
   stage: ${opt:stage, "dev"}
   region: ${opt:region, "us-east-1"}
   memorySize: 128
