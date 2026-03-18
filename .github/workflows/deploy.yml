@@ -17,7 +17,7 @@ jobs:
   # Deploy to dev — triggered on every push to main
   # ---------------------------------------------------------------------------
   deploy-dev:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && github.actor == 'daviwesley'
     name: Deploy → dev
     runs-on: ubuntu-latest
     environment: dev
@@ -62,7 +62,7 @@ jobs:
   # Deploy to prod — triggered on a semver tag (e.g. v1.2.3)
   # ---------------------------------------------------------------------------
   deploy-prod:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') && github.actor == 'daviwesley'
     name: Deploy → prod
     runs-on: ubuntu-latest
     environment: prod
