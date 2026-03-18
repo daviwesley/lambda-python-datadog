@@ -48,7 +48,7 @@ provider:
   region: ${opt:region, "us-east-1"}
   memorySize: 128
   timeout: 30
-  logRetentionInDays: 2
+  logRetentionInDays: 3
 
   environment:
     # Datadog unified service tagging
