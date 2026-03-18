@@ -137,22 +137,14 @@ container automatically to produce Linux-compatible wheels.
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `DD_API_KEY_SECRET_ARN` | ✅ | ARN of the AWS Secrets Manager secret that holds your Datadog API key |
+| `DD_API_KEY` | ✅ | Raw Datadog API key (set as a GitHub Actions Variable — see CI/CD section) |
 | `DD_SITE` | ✅ | Datadog site, e.g. `datadoghq.com` or `datadoghq.eu` |
 | `APP_VERSION` | optional | Semantic version tag injected as `DD_VERSION` (default: `1.0.0`) |
 
-Store your Datadog API key in AWS Secrets Manager:
+Export the variables for a manual deploy:
 
 ```bash
-aws secretsmanager create-secret \
-  --name /datadog/api-key \
-  --secret-string "YOUR_DD_API_KEY"
-```
-
-Then export the ARN:
-
-```bash
-export DD_API_KEY_SECRET_ARN="arn:aws:secretsmanager:us-east-1:123456789012:secret:/datadog/api-key"
+export DD_API_KEY="YOUR_DD_API_KEY"
 export DD_SITE="datadoghq.com"
 ```
 
@@ -191,18 +183,20 @@ Two workflows are included in `.github/workflows/`:
 
 ### Required GitHub Secrets
 
-Navigate to **Settings → Secrets and variables → Actions** in your repository and add:
+Navigate to **Settings → Secrets and variables → Actions → Secrets** in your repository and add:
 
 | Secret | Description |
 |--------|-------------|
 | `AWS_ACCESS_KEY_ID` | AWS IAM access key with Lambda / CloudFormation deploy permissions |
 | `AWS_SECRET_ACCESS_KEY` | Corresponding AWS IAM secret key |
-| `DD_API_KEY_SECRET_ARN` | ARN of the AWS Secrets Manager secret holding your Datadog API key |
 
 ### Required GitHub Variables
 
+Navigate to **Settings → Secrets and variables → Actions → Variables** and add:
+
 | Variable | Description | Default |
 |----------|-------------|---------|
+| `DD_API_KEY` | Raw Datadog API key used at deploy time | _(none — must be set)_ |
 | `DD_SITE` | Datadog ingest site (e.g. `datadoghq.com`) | _(none — must be set)_ |
 | `AWS_REGION` | AWS region to deploy to | `us-east-1` |
 
@@ -241,8 +235,7 @@ The IAM user referenced by the AWS secrets needs the following permissions to de
         "logs:DescribeLogGroups",
         "logs:CreateLogGroup",
         "logs:DeleteLogGroup",
-        "logs:PutRetentionPolicy",
-        "secretsmanager:GetSecretValue"
+        "logs:PutRetentionPolicy"
       ],
       "Resource": "*"
     }
@@ -355,7 +348,7 @@ metrics.add_metric(name="ItemsCreated", unit=MetricUnit.Count, value=1)
 The `serverless-plugin-datadog` plugin automatically:
 
 1. Attaches the **Datadog Lambda Layer** (contains the Datadog Forwarder & ddtrace).
-2. Sets all required environment variables (`DD_API_KEY_SECRET_ARN`, `DD_SITE`, etc.).
+2. Sets all required environment variables (`DD_API_KEY`, `DD_SITE`, etc.).
 3. Enables **Enhanced Lambda Metrics** (billed invocations, errors, cold starts, etc.).
 4. Enables **Log correlation** — every log line is tagged with the active `trace_id` / `span_id`.
 

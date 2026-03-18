@@ -23,11 +23,11 @@ custom:
 
   # ---- Datadog plugin -------------------------------------------------------
   # The plugin automatically adds the Datadog Lambda layer and injects the
-  # dd-trace forwarder. Set DD_API_KEY (or DD_KMS_API_KEY) in the environment
-  # or via AWS Secrets Manager / SSM — never hard-code it here.
+  # dd-trace forwarder. DD_API_KEY is supplied at deploy time via the
+  # DD_API_KEY environment variable (set in GitHub Actions Variables).
   datadog:
     site: ${env:DD_SITE, "datadoghq.com"}
-    apiKeySecretArn: ${env:DD_API_KEY_SECRET_ARN, ""}  # preferred: key stored in Secrets Manager
+    apiKey: ${env:DD_API_KEY}  # raw key injected from GitHub Actions Variable
     enableDDTracing: true
     enableDDLogs: true
     enableEnhancedMetrics: true

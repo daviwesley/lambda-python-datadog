@@ -54,7 +54,7 @@ jobs:
       - name: Deploy to dev
         run: make deploy STAGE=dev REGION=${{ vars.AWS_REGION || 'us-east-1' }}
         env:
-          DD_API_KEY_SECRET_ARN: ${{ secrets.DD_API_KEY_SECRET_ARN }}
+          DD_API_KEY: ${{ vars.DD_API_KEY }}
           DD_SITE: ${{ vars.DD_SITE }}
           APP_VERSION: ${{ github.sha }}
 
@@ -99,6 +99,6 @@ jobs:
       - name: Deploy to prod
         run: make deploy-prod REGION=${{ vars.AWS_REGION || 'us-east-1' }}
         env:
-          DD_API_KEY_SECRET_ARN: ${{ secrets.DD_API_KEY_SECRET_ARN }}
+          DD_API_KEY: ${{ vars.DD_API_KEY }}
           DD_SITE: ${{ vars.DD_SITE }}
           APP_VERSION: ${{ github.ref_name }}
