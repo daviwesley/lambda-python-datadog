@@ -36,10 +36,10 @@ export-requirements:
 # Deploy (Serverless Framework)
 # ---------------------------------------------------------------------------
 deploy: export-requirements
-	npx serverless deploy --stage $(STAGE) --region $(REGION)
+	npx serverless deploy --stage $(STAGE) --region $(REGION) --verbose
 
 deploy-prod: export-requirements
-	npx serverless deploy --stage prod --region $(REGION)
+	npx serverless deploy --stage prod --region $(REGION) --verbose
 
 remove:
-	npx serverless remove --stage $(STAGE) --region $(REGION)
+	npx serverless remove --stage $(STAGE) --region $(REGION) --verbose
