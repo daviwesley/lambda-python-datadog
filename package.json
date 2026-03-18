@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "private": true,
   "devDependencies": {
-    "serverless": "^4.33.0",
+    "serverless": "3.40.0",
     "serverless-plugin-datadog": "^5.122.1",
     "serverless-python-requirements": "^6.1.2"
   }
