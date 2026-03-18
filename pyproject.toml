@@ -2,7 +2,7 @@
 name = "lambda-python-datadog"
 version = "1.0.0"
 description = "FastAPI application on AWS Lambda with Datadog observability"
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 dependencies = [
     "fastapi==0.135.1",
     "mangum==0.21.0",
