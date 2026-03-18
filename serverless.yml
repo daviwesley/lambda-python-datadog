@@ -15,7 +15,7 @@ plugins:
 custom:
   # ---- Python requirements -----------------------------------------------
   pythonRequirements:
-    dockerizePip: non-linux   # use Docker only on non-Linux hosts
+    dockerizePip: true        # always use Docker for consistency
     slim: true                # strip tests / __pycache__ to reduce package size
     strip: false              # keep native library symbols (needed by ddtrace)
     useStaticCache: true
