@@ -13,12 +13,8 @@ Environment variables (set in serverless.yml):
   POWERTOOLS_METRICS_NAMESPACE — CloudWatch namespace for EMF metrics
 """
 
-from aws_lambda_powertools import Logger, Metrics
+from aws_lambda_powertools import Logger
 
 # Structured JSON logger — injects Lambda context (request_id, cold_start,
 # function_name, etc.) and optionally a correlation ID on every log record.
 logger = Logger()
-
-# CloudWatch EMF metrics — flushed to CloudWatch Logs as structured JSON;
-# no Datadog Agent or custom forwarder required for this signal.
-metrics = Metrics()
