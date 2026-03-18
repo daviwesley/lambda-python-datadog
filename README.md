@@ -31,21 +31,14 @@ AWS Lambda  (Python 3.12)
 
 ## Prerequisites
 
-| Tool | Version |
-|------|---------|
-| Python | 3.12 |
-| [uv](https://docs.astral.sh/uv/) | ≥ 0.4 |
-| Node.js | ≥ 18 |
-| Serverless Framework | 3.x |
-| AWS CLI | configured with deploy permissions |
-
-Install uv (if not already installed):
-
-```bash
-pip install uv
-# or via the official installer:
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
+| Tool | Version | Notes |
+|------|---------|-------|
+| Python | 3.12 | `brew install python@3.12` on macOS |
+| [uv](https://docs.astral.sh/uv/) | ≥ 0.4 | `brew install uv` on macOS |
+| Node.js | ≥ 18 | `brew install node` on macOS |
+| Serverless Framework | 3.x | installed via `npm install` |
+| AWS CLI | any | only needed for deployment |
+| Docker Desktop | any | only needed for deployment from macOS |
 
 ---
 
@@ -82,7 +75,63 @@ make test
 
 ---
 
-## Deployment
+## Local development on macOS
+
+Yes — the application runs fully on macOS without any AWS account or Datadog Agent.
+
+### Prerequisites
+
+Install the required tools with [Homebrew](https://brew.sh):
+
+```bash
+# Python 3.12
+brew install python@3.12
+
+# uv (fast Python package manager)
+brew install uv
+# alternatively, the official installer also works on macOS:
+# curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Node.js (for Serverless Framework and plugins)
+brew install node
+```
+
+> **Docker Desktop** is only needed when you want to deploy from macOS.
+> `serverless-python-requirements` uses `dockerizePip: non-linux` to build Linux-compatible
+> native packages (e.g. `ddtrace`) inside a Docker container that matches the Lambda runtime.
+> For `make run` and `make test` Docker is **not** required.
+
+### Run the server locally
+
+```bash
+make install   # creates .venv and installs all dependencies
+make run       # → http://localhost:8000
+               # → http://localhost:8000/docs  (Swagger UI)
+```
+
+`DD_TRACE_ENABLED=false` is set automatically so ddtrace never tries to connect to a Datadog Agent. The API works identically to production — only the observability signals (traces, metrics) are suppressed.
+
+### Run the tests
+
+```bash
+make test
+```
+
+All tests run in-process with no external services required.
+
+### Deploy from macOS
+
+Docker Desktop must be running before you deploy:
+
+```bash
+# Start Docker Desktop, then:
+make deploy
+```
+
+`serverless-python-requirements` will spin up a `lambci/lambda:build-python3.12`
+container automatically to produce Linux-compatible wheels.
+
+---
 
 ### Environment variables
 
