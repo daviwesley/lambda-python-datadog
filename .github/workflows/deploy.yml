@@ -51,6 +51,9 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
 
+      - name: Print DD_SITE
+        run: echo "DD_SITE=${{ vars.DD_SITE }}"
+
       - name: Deploy to dev
         run: make deploy STAGE=dev REGION=${{ vars.AWS_REGION || 'us-east-1' }}
         env:
