@@ -13,7 +13,9 @@ Environment variables (set in serverless.yml):
 """
 
 from aws_lambda_powertools import Logger
-from aws_lambda_powertools.logging.formatter.datadog import DatadogLogFormatter
+from aws_lambda_powertools.logging.formatters.datadog import (
+    DatadogLogFormatter,
+)
 
 # Structured JSON logger — injects Lambda context (request_id, cold_start,
 # function_name, etc.) and optionally a correlation ID on every log record.
