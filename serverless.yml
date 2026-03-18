@@ -1,3 +1,5 @@
+# "org" ensures this Service is used with the correct Serverless Framework Access Key.
+org: daviwesley
 service: lambda-python-datadog
 
 frameworkVersion: ">=4.0.0 <5.0.0"
@@ -45,9 +47,9 @@ provider:
   architecture: arm64
   stage: ${opt:stage, "dev"}
   region: ${opt:region, "us-east-1"}
-  memorySize: 512
+  memorySize: 128
   timeout: 30
-  logRetentionInDays: 14
+  logRetentionInDays: 2
 
   environment:
     # Datadog unified service tagging
