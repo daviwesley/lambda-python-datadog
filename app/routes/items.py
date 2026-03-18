@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from app.powertools import logger, tracer
+from app.powertools import logger
 
 router = APIRouter(prefix="/items", tags=["items"])
 
@@ -21,14 +21,12 @@ class ItemResponse(ItemCreate):
 
 
 @router.get("", response_model=list[ItemResponse], summary="List all items")
-@tracer.capture_method
 def list_items():
     logger.info("Listing items", extra={"item_count": len(_items)})
     return [ItemResponse(id=item_id, **item) for item_id, item in _items.items()]
 
 
 @router.get("/{item_id}", response_model=ItemResponse, summary="Get a single item")
-@tracer.capture_method
 def get_item(item_id: int):
     if item_id not in _items:
         logger.warning("Item not found", extra={"item_id": item_id})
@@ -38,7 +36,6 @@ def get_item(item_id: int):
 
 
 @router.post("", response_model=ItemResponse, status_code=201, summary="Create an item")
-@tracer.capture_method
 def create_item(payload: ItemCreate):
     global _counter
     _counter += 1
@@ -48,7 +45,6 @@ def create_item(payload: ItemCreate):
 
 
 @router.delete("/{item_id}", status_code=204, summary="Delete an item")
-@tracer.capture_method
 def delete_item(item_id: int):
     if item_id not in _items:
         logger.warning("Item not found for deletion", extra={"item_id": item_id})

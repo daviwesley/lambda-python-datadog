@@ -22,7 +22,7 @@ test:
 # Local development
 # ---------------------------------------------------------------------------
 run:
-	DD_TRACE_ENABLED=false POWERTOOLS_TRACE_DISABLED=true uv run uvicorn app.main:app --reload --port 8000
+	DD_TRACE_ENABLED=false uv run uvicorn app.main:app --reload --port 8000
 
 # ---------------------------------------------------------------------------
 # Lambda packaging — regenerate requirements.txt consumed by

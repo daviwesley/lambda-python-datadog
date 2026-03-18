@@ -56,18 +56,12 @@ provider:
 
     # ddtrace runtime behaviour
     DD_TRACE_ENABLED: "true"
-    DD_LOGS_INJECTION: "true"        # injects trace/span IDs into log lines
+    DD_LOGS_INJECTION: "true"        # injects trace/span IDs into logs (requires Datadog Lambda Layer added by serverless-plugin-datadog)
 
     # AWS Lambda Powertools
     POWERTOOLS_SERVICE_NAME: ${self:service}
     POWERTOOLS_LOG_LEVEL: INFO
     POWERTOOLS_METRICS_NAMESPACE: LambdaPythonDatadog
-    # Do not capture HTTP response bodies in X-Ray — Datadog APM already
-    # captures them via TraceMiddleware, so this avoids redundant storage.
-    POWERTOOLS_TRACER_CAPTURE_RESPONSE: "false"
-
-  tracing:
-    lambda: true                     # enables AWS X-Ray active tracing (used by Powertools Tracer)
 
   iam:
     role:
@@ -79,12 +73,6 @@ provider:
             - logs:CreateLogStream
             - logs:PutLogEvents
           Resource: "arn:aws:logs:*:*:*"
-        # Allow Powertools Tracer to write X-Ray segments
-        - Effect: Allow
-          Action:
-            - xray:PutTraceSegments
-            - xray:PutTelemetryRecords
-          Resource: "*"
 
 # ---------------------------------------------------------------------------
 # Package
