@@ -98,6 +98,7 @@ functions:
     handler: app.handler.lambda_handler
     description: "FastAPI web application with Datadog observability"
     logs:
+      format: JSON
       applicationLogLevel: INFO
       systemLogLevel: ERROR 
     events:
