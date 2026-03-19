@@ -1,7 +1,12 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from app.powertools import logger
+from aws_lambda_powertools.logging import Logger
+from aws_lambda_powertools.logging.formatters.datadog import (
+    DatadogLogFormatter,
+)
+
+logger = Logger(logger_formatter=DatadogLogFormatter())
 
 router = APIRouter(prefix="/items", tags=["items"])
 

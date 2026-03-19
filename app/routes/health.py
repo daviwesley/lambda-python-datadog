@@ -1,11 +1,16 @@
 from fastapi import APIRouter
 
-from app.powertools import logger
+from aws_lambda_powertools.logging import Logger
+from aws_lambda_powertools.logging.formatters.datadog import (
+    DatadogLogFormatter,
+)
+
+logger = Logger(logger_formatter=DatadogLogFormatter())
 
 router = APIRouter(tags=["health"])
 
 
 @router.get("/health", summary="Health check")
 def health_check():
-    logger.debug("Health check called")
+    logger.info("Health check called")
     return {"status": "ok"}

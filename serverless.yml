@@ -46,9 +46,13 @@ provider:
   runtime: python3.14
   stage: ${opt:stage, "dev"}
   region: ${opt:region, "us-east-1"}
-  memorySize: 128
-  timeout: 30
+  memorySize: 150
+  timeout: 3
   logRetentionInDays: 3
+  logs:
+    format: JSON
+    applicationLogLevel: INFO
+    systemLogLevel: WARN
 
   environment:
     # Datadog unified service tagging
@@ -97,10 +101,6 @@ functions:
   api:
     handler: app.handler.lambda_handler
     description: "FastAPI web application with Datadog observability"
-    logs:
-      format: JSON
-      applicationLogLevel: INFO
-      systemLogLevel: ERROR 
     events:
       # AWS Lambda Function URL (no API Gateway cost, simplest setup)
       - httpApi:
