@@ -14,17 +14,26 @@ The ``datadog_lambda_wrapper`` decorator adds:
   - Distributed tracing via Datadog APM
   - Custom metrics via ``datadog_lambda.metric``
 """
+from aws_lambda_powertools.logging import correlation_paths
+from aws_lambda_powertools.logging import Logger
+from aws_lambda_powertools.logging.formatters.datadog import (
+    DatadogLogFormatter,
+)
 from datadog_lambda.wrapper import datadog_lambda_wrapper
 from mangum import Mangum
 
-from app.main import app
-from app.powertools import logger
+from app.main import fastapi_app
 
 # Mangum converts the Lambda event/context into an ASGI scope.
-_asgi_handler = Mangum(app, lifespan="off")
+_asgi_handler = Mangum(fastapi_app, lifespan="off")
+
+logger = Logger(logger_formatter=DatadogLogFormatter())
 
 
-@logger.inject_lambda_context(log_event=False)
+@logger.inject_lambda_context(
+    correlation_id_path=correlation_paths.API_GATEWAY_HTTP,
+    clear_state=True
+)
 @datadog_lambda_wrapper
 def lambda_handler(event, context):
     logger.info(
