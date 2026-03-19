@@ -97,6 +97,9 @@ functions:
   api:
     handler: app.handler.lambda_handler
     description: "FastAPI web application with Datadog observability"
+    logs:
+      applicationLogLevel: INFO
+      systemLogLevel: ERROR 
     events:
       # AWS Lambda Function URL (no API Gateway cost, simplest setup)
       - httpApi:
