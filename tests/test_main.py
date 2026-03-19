@@ -6,7 +6,7 @@ Run with:
 
 from fastapi.testclient import TestClient
 
-from app.main import app
+from app.main import fastapi_app as app
 
 # Use the synchronous TestClient (no need for pytest-asyncio for these tests)
 client = TestClient(app, raise_server_exceptions=False)
@@ -16,8 +16,10 @@ client = TestClient(app, raise_server_exceptions=False)
 # Health
 # ---------------------------------------------------------------------------
 class TestHealth:
-    def test_health_returns_200(self):
+    def test_health_returns_200(self, caplog):
         response = client.get("/health")
+        msg = "Health check called"
+        assert msg in caplog.text
         assert response.status_code == 200
 
     def test_health_payload(self):
