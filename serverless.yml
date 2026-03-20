@@ -19,6 +19,8 @@ custom:
   # ---- Python requirements -----------------------------------------------
   pythonRequirements:
     dockerizePip: true        # always use Docker for consistency
+    dockerImage: public.ecr.aws/sam/build-python3.14:latest-arm64
+    dockerRunCmdExtraArgs: ['--platform', 'linux/arm64/v8'] 
     slim: true                # strip tests / __pycache__ to reduce package size
     strip: false              # keep native library symbols (needed by ddtrace)
     useStaticCache: true
