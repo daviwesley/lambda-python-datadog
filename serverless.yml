@@ -55,6 +55,7 @@ provider:
   memorySize: 150
   timeout: 3
   logRetentionInDays: 3
+  architecture: arm64
   logs:
     format: JSON
     applicationLogLevel: INFO
