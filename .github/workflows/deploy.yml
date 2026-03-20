@@ -19,7 +19,7 @@ jobs:
   deploy-dev:
     if: github.ref == 'refs/heads/main' && github.actor == 'daviwesley'
     name: Deploy → dev
-    runs-on: ubuntu-latest
+    runs-on: uubuntu-24.04-arm
     environment: dev
     permissions:
       contents: read
@@ -37,6 +37,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: "npm"
+
+      - name: Cache uv dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('**/pyproject.toml', '**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
 
       - name: Install Python dependencies
         run: uv sync
@@ -82,6 +91,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: "npm"
+
+      - name: Cache uv dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('**/pyproject.toml', '**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
 
       - name: Install Python dependencies
         run: uv sync
