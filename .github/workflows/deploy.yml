@@ -6,6 +6,18 @@ on:
       - main
     tags:
       - "v*"
+    paths-ignore:
+      # Documentation files
+      - "docs/**"
+      - "**/*.md"
+      - "README.md"
+      - "LICENSE"
+      # GitHub workflows and configurations
+      - ".github/**"
+      - ".gitignore"
+      # Configuration files (not needed for deploy)
+      - ".editorconfig"
+      - ".pre-commit-config.yaml"
 
 # One deployment at a time — cancel any in-progress run for the same ref.
 concurrency:
