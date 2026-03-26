@@ -1,63 +1,63 @@
 # lambda-python-datadog
 
-> FastAPI web application running on **AWS Lambda**, deployed with the [Serverless Framework](https://www.serverless.com/), and fully instrumented with **Datadog** for observability (APM traces, metrics, and logs).
+> Aplicação web FastAPI executada em **AWS Lambda**, implantada com o [Serverless Framework](https://www.serverless.com/), e totalmente instrumentada com **Datadog** para observabilidade (rastreamentos APM, métricas e logs).
 
 ---
 
-## Architecture
+## Arquitetura
 
 ```
 API Gateway HTTP API
        │
        ▼
 AWS Lambda  (Python 3.12)
-  ├── app/handler.py       ← Lambda entry-point (Mangum + datadog_lambda_wrapper)
-  ├── app/main.py          ← FastAPI application factory + Datadog TraceMiddleware
+  ├── app/handler.py       ← Ponto de entrada Lambda (Mangum + datadog_lambda_wrapper)
+  ├── app/main.py          ← Fábrica de aplicação FastAPI + Datadog TraceMiddleware
   └── app/routes/
         ├── health.py      ← GET /health
         └── items.py       ← CRUD /items
 ```
 
-**Observability stack**
+**Pilha de observabilidade**
 
-| Signal  | Tool |
+| Sinal  | Ferramenta |
 |---------|------|
-| Traces (APM) | `ddtrace` + Datadog Lambda Layer |
-| Metrics (Datadog) | Enhanced Lambda Metrics via `datadog-lambda` |
-| Metrics (CloudWatch) | Powertools `Metrics` via EMF (Embedded Metrics Format) |
-| Logs | Powertools `Logger` (structured JSON) correlated to traces via `DD_LOGS_INJECTION=true` |
+| Rastreamentos (APM) | `ddtrace` + Datadog Lambda Layer |
+| Métricas (Datadog) | Métricas Lambda Aprimoradas via `datadog-lambda` |
+| Métricas (CloudWatch) | Powertools `Metrics` via EMF (Embedded Metrics Format) |
+| Logs | Powertools `Logger` (JSON estruturado) correlacionado com rastreamentos via `DD_LOGS_INJECTION=true` |
 
 ---
 
-## Prerequisites
+## Pré-requisitos
 
-| Tool | Version | Notes |
+| Ferramenta | Versão | Notas |
 |------|---------|-------|
-| Python | 3.12 | `brew install python@3.12` on macOS |
-| [uv](https://docs.astral.sh/uv/) | ≥ 0.4 | `brew install uv` on macOS |
-| Node.js | ≥ 18 | `brew install node` on macOS |
-| Serverless Framework | 3.x | installed via `npm install` |
-| AWS CLI | any | only needed for deployment |
-| Docker Desktop | any | only needed for deployment from macOS |
+| Python | 3.12 | `brew install python@3.12` no macOS |
+| [uv](https://docs.astral.sh/uv/) | ≥ 0.4 | `brew install uv` no macOS |
+| Node.js | ≥ 18 | `brew install node` no macOS |
+| Serverless Framework | 3.x | instalado via `npm install` |
+| AWS CLI | qualquer | necessário apenas para implantação |
+| Docker Desktop | qualquer | necessário apenas para implantação no macOS |
 
 ---
 
-## Quick start
+## Início rápido
 
-### 1. Clone and install dependencies
+### 1. Clonar e instalar dependências
 
 ```bash
 git clone https://github.com/daviwesley/lambda-python-datadog.git
 cd lambda-python-datadog
 
-# Creates .venv and installs runtime + dev dependencies via uv
+# Cria .venv e instala dependências de runtime + desenvolvimento via uv
 make install
 
-# Serverless Framework plugins
+# Plugins do Serverless Framework
 npm install
 ```
 
-### 2. Run locally
+### 2. Executar localmente
 
 ```bash
 make run
@@ -65,9 +65,9 @@ make run
 # → http://localhost:8000/docs  (Swagger UI)
 ```
 
-`DD_TRACE_ENABLED` is set to `false` for local runs so ddtrace doesn't try to reach a Datadog Agent.
+`DD_TRACE_ENABLED` é definido como `false` para execuções locais, portanto, o ddtrace não tenta alcançar um Agente Datadog.
 
-### 3. Run tests
+### 3. Executar testes
 
 ```bash
 make test
@@ -75,96 +75,96 @@ make test
 
 ---
 
-## Local development on macOS
+## Desenvolvimento local no macOS
 
-Yes — the application runs fully on macOS without any AWS account or Datadog Agent.
+Sim — a aplicação executa totalmente no macOS sem qualquer conta AWS ou Agente Datadog.
 
-### Prerequisites
+### Pré-requisitos
 
-Install the required tools with [Homebrew](https://brew.sh):
+Instale as ferramentas necessárias com o [Homebrew](https://brew.sh):
 
 ```bash
 # Python 3.12
 brew install python@3.12
 
-# uv (fast Python package manager)
+# uv (gerenciador de pacotes Python rápido)
 brew install uv
-# alternatively, the official installer also works on macOS:
+# alternativamente, o instalador oficial também funciona no macOS:
 # curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Node.js (for Serverless Framework and plugins)
+# Node.js (para Serverless Framework e plugins)
 brew install node
 ```
 
-> **Docker Desktop** is only needed when you want to deploy from macOS.
-> `serverless-python-requirements` uses `dockerizePip: non-linux` to build Linux-compatible
-> native packages (e.g. `ddtrace`) inside a Docker container that matches the Lambda runtime.
-> For `make run` and `make test` Docker is **not** required.
+> **Docker Desktop** é necessário apenas quando você quer fazer implantação no macOS.
+> `serverless-python-requirements` executa um container `lambci/lambda:build-python3.12`
+> automaticamente para produzir wheels compatíveis com Linux (por exemplo, `ddtrace`).
+> Para `make run` e `make test`, Docker **não** é necessário.
 
-### Run the server locally
+### Executar o servidor localmente
 
 ```bash
-make install   # creates .venv and installs all dependencies
+make install   # cria .venv e instala todas as dependências
 make run       # → http://localhost:8000
                # → http://localhost:8000/docs  (Swagger UI)
 ```
 
-`DD_TRACE_ENABLED=false` is set automatically so ddtrace never tries to connect to a Datadog Agent. The API works identically to production — only the observability signals (traces, metrics) are suppressed.
+`DD_TRACE_ENABLED=false` é definido automaticamente, portanto, o ddtrace nunca tenta se conectar a um Agente Datadog. A API funciona de forma idêntica à produção — apenas os sinais de observabilidade (rastreamentos, métricas) são suprimidos.
 
-### Run the tests
+### Executar os testes
 
 ```bash
 make test
 ```
 
-All tests run in-process with no external services required.
+Todos os testes são executados em processo, sem necessidade de serviços externos.
 
-### Deploy from macOS
+### Implantar no macOS
 
-Docker Desktop must be running before you deploy:
+O Docker Desktop deve estar em execução antes de você fazer a implantação:
 
 ```bash
-# Start Docker Desktop, then:
+# Inicie o Docker Desktop e depois:
 make deploy
 ```
 
-`serverless-python-requirements` will spin up a `lambci/lambda:build-python3.12`
-container automatically to produce Linux-compatible wheels.
+`serverless-python-requirements` executará um container `lambci/lambda:build-python3.12`
+automaticamente para produzir wheels compatíveis com Linux.
 
 ---
 
-### Environment variables
+### Variáveis de ambiente
 
-| Variable | Required | Description |
+| Variável | Obrigatória | Descrição |
 |----------|----------|-------------|
-| `DD_API_KEY` | ✅ | Raw Datadog API key (set as a GitHub Actions Variable — see CI/CD section) |
-| `DD_SITE` | ✅ | Datadog site, e.g. `datadoghq.com` or `datadoghq.eu` |
-| `APP_VERSION` | optional | Semantic version tag injected as `DD_VERSION` (default: `1.0.0`) |
+| `DD_API_KEY` | ✅ | Chave de API Datadog bruta (definida como variável do GitHub Actions — veja a seção CI/CD) |
+| `DD_SITE` | ✅ | Site Datadog, por exemplo, `datadoghq.com` ou `datadoghq.eu` |
+| `APP_VERSION` | opcional | Tag de versão semântica injetada como `DD_VERSION` (padrão: `1.0.0`) |
 
-Export the variables for a manual deploy:
+Exporte as variáveis para uma implantação manual:
 
 ```bash
 export DD_API_KEY="YOUR_DD_API_KEY"
 export DD_SITE="datadoghq.com"
 ```
 
-### Deploy to `dev`
+### Implantar em `dev`
 
 ```bash
 make deploy
-# or
+# ou
 npx serverless deploy --stage dev
 ```
 
-### Deploy to `prod`
+### Implantar em `prod`
 
 ```bash
 make deploy-prod
-# or
+# ou
 npx serverless deploy --stage prod
 ```
 
-### Remove a stack
+### Remover uma pilha
 
 ```bash
 make remove STAGE=dev
@@ -174,44 +174,44 @@ make remove STAGE=dev
 
 ## CI/CD (GitHub Actions)
 
-Two workflows are included in `.github/workflows/`:
+Dois fluxos de trabalho estão inclusos em `.github/workflows/`:
 
-| Workflow | File | Trigger |
+| Fluxo de trabalho | Arquivo | Acionador |
 |----------|------|---------|
-| **CI** | `ci.yml` | Every push and pull request |
-| **Deploy** | `deploy.yml` | Push to `main` → `dev`; tag `v*` → `prod` |
+| **CI** | `ci.yml` | A cada push e pull request |
+| **Deploy** | `deploy.yml` | Push em `main` → `dev`; tag `v*` → `prod` |
 
-### Required GitHub Secrets
+### Segredos necessários do GitHub
 
-Navigate to **Settings → Secrets and variables → Actions → Secrets** in your repository and add:
+Navegue até **Settings → Secrets and variables → Actions → Secrets** em seu repositório e adicione:
 
-| Secret | Description |
+| Segredo | Descrição |
 |--------|-------------|
-| `AWS_ACCESS_KEY_ID` | AWS IAM access key with Lambda / CloudFormation deploy permissions |
-| `AWS_SECRET_ACCESS_KEY` | Corresponding AWS IAM secret key |
+| `AWS_ACCESS_KEY_ID` | Chave de acesso do AWS IAM com permissões de implantação Lambda / CloudFormation |
+| `AWS_SECRET_ACCESS_KEY` | Chave secreta correspondente do AWS IAM |
 
-### Required GitHub Variables
+### Variáveis necessárias do GitHub
 
-Navigate to **Settings → Secrets and variables → Actions → Variables** and add:
+Navegue até **Settings → Secrets and variables → Actions → Variables** e adicione:
 
-| Variable | Description | Default |
+| Variável | Descrição | Padrão |
 |----------|-------------|---------|
-| `DD_API_KEY` | Raw Datadog API key used at deploy time | _(none — must be set)_ |
-| `DD_SITE` | Datadog ingest site (e.g. `datadoghq.com`) | _(none — must be set)_ |
-| `AWS_REGION` | AWS region to deploy to | `us-east-1` |
+| `DD_API_KEY` | Chave de API Datadog bruta usada no momento da implantação | _(nenhuma — deve ser definida)_ |
+| `DD_SITE` | Site de ingestão Datadog (por exemplo, `datadoghq.com`) | _(nenhuma — deve ser definida)_ |
+| `AWS_REGION` | Região AWS para implantar | `us-east-1` |
 
-### Deployment flow
+### Fluxo de implantação
 
 ```
-push to main  ─────────────────► deploy to dev  (APP_VERSION = git SHA)
-push tag v1.2.3  ──────────────► deploy to prod (APP_VERSION = v1.2.3)
+push em main  ─────────────────► implantar em dev  (APP_VERSION = git SHA)
+push tag v1.2.3  ──────────────► implantar em prod (APP_VERSION = v1.2.3)
 ```
 
-The `dev` and `prod` jobs use GitHub [Environments](https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment), so you can add deployment protection rules (e.g. require a manual approval before prod).
+Os trabalhos `dev` e `prod` usam [Ambientes](https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment) do GitHub, portanto, você pode adicionar regras de proteção de implantação (por exemplo, exigir aprovação manual antes de prod).
 
-### Minimum IAM permissions
+### Permissões IAM mínimas
 
-The IAM user referenced by the AWS secrets needs the following permissions to deploy:
+O usuário do IAM referenciado pelos segredos AWS precisa das seguintes permissões para fazer a implantação:
 
 ```json
 {
@@ -245,33 +245,33 @@ The IAM user referenced by the AWS secrets needs the following permissions to de
 
 ---
 
-## API reference
+## Referência de API
 
-| Method | Path | Description |
+| Método | Caminho | Descrição |
 |--------|------|-------------|
-| `GET` | `/health` | Health check |
-| `GET` | `/items` | List all items |
-| `POST` | `/items` | Create an item |
-| `GET` | `/items/{id}` | Get an item by ID |
-| `DELETE` | `/items/{id}` | Delete an item |
+| `GET` | `/health` | Verificação de saúde |
+| `GET` | `/items` | Listar todos os itens |
+| `POST` | `/items` | Criar um item |
+| `GET` | `/items/{id}` | Obter um item por ID |
+| `DELETE` | `/items/{id}` | Deletar um item |
 
-Interactive docs are available at `/docs` (Swagger UI) and `/redoc`.
+Documentação interativa disponível em `/docs` (Swagger UI) e `/redoc`.
 
 ---
 
-## Project structure
+## Estrutura do projeto
 
 ```
 .
 ├── .github/
 │   └── workflows/
-│       ├── ci.yml              # Lint + test on every push/PR
-│       └── deploy.yml          # Deploy to dev (main) / prod (v* tags)
+│       ├── ci.yml              # Lint + test a cada push/PR
+│       └── deploy.yml          # Implantar em dev (main) / prod (tags v*)
 ├── app/
 │   ├── __init__.py
-│   ├── handler.py          # Lambda entry-point
-│   ├── main.py             # FastAPI app factory
-│   ├── powertools.py       # Shared Logger and Metrics singletons
+│   ├── handler.py          # Ponto de entrada Lambda
+│   ├── main.py             # Fábrica de aplicação FastAPI
+│   ├── powertools.py       # Singletons compartilhados de Logger e Metrics
 │   └── routes/
 │       ├── __init__.py
 │       ├── health.py
@@ -280,37 +280,37 @@ Interactive docs are available at `/docs` (Swagger UI) and `/redoc`.
 │   ├── __init__.py
 │   ├── conftest.py
 │   └── test_main.py
-├── .python-version         # Pins Python 3.12 for uv
-├── pyproject.toml          # Single source of truth for all dependencies
-├── uv.lock                 # Full dependency lock file (committed)
-├── requirements.txt        # Auto-generated by `make export-requirements` for Lambda packaging
-├── serverless.yml          # Serverless Framework IaC
-├── package.json            # Serverless plugins
-├── pytest.ini              # Test configuration
+├── .python-version         # Fixa Python 3.12 para uv
+├── pyproject.toml          # Fonte única da verdade para todas as dependências
+├── uv.lock                 # Arquivo de bloqueio de dependência completo (comprometido)
+├── requirements.txt        # Auto-gerado por `make export-requirements` para empacotamento Lambda
+├── serverless.yml          # IaC do Serverless Framework
+├── package.json            # Plugins do Serverless
+├── pytest.ini              # Configuração de teste
 ├── Makefile
 └── README.md
 ```
 
-> **`requirements.txt` is auto-generated** by `uv export` and should not be edited by hand.  
-> Run `make export-requirements` after changing dependencies in `pyproject.toml`.
+> **`requirements.txt` é auto-gerado** por `uv export` e não deve ser editado manualmente.  
+> Execute `make export-requirements` após alterar dependências em `pyproject.toml`.
 
 ---
 
 ## AWS Lambda Powertools
 
-[AWS Lambda Powertools for Python](https://docs.powertools.aws.dev/lambda/python/latest/) is integrated via `app/powertools.py`, which exposes two shared singletons imported throughout the application.
+[AWS Lambda Powertools para Python](https://docs.powertools.aws.dev/lambda/python/latest/) é integrado via `app/powertools.py`, que expõe dois singletons compartilhados importados em toda a aplicação.
 
-Tracing is handled exclusively by **Datadog APM** (`ddtrace` + `TraceMiddleware`). Powertools Tracer / AWS X-Ray is not used.
+Rastreamento é tratado exclusivamente por **Datadog APM** (`ddtrace` + `TraceMiddleware`). O Powertools Tracer / AWS X-Ray não é usado.
 
 ### Logger
 
-Powertools `Logger` replaces stdlib logging and outputs structured JSON on every invocation:
+O `Logger` do Powertools substitui o logging stdlib e produz JSON estruturado em cada invocação:
 
 ```json
 {
   "level": "INFO",
   "location": "list_items:app/routes/items.py:23",
-  "message": "Listing items",
+  "message": "Listando itens",
   "item_count": 3,
   "service": "lambda-python-datadog",
   "cold_start": true,
@@ -319,42 +319,66 @@ Powertools `Logger` replaces stdlib logging and outputs structured JSON on every
 }
 ```
 
-The `@logger.inject_lambda_context` decorator on the handler automatically appends `cold_start`, `function_name`, `function_arn`, and `request_id` to every log line.  
-The FastAPI correlation-ID middleware in `app/main.py` forwards the API Gateway `x-amzn-requestid` header so all logs within a request share the same `correlation_id`.
+O decorador `@logger.inject_lambda_context` no manipulador adiciona automaticamente `cold_start`, `function_name`, `function_arn` e `request_id` a cada linha de log.  
+O middleware de ID de correlação do FastAPI em `app/main.py` encaminha o cabeçalho `x-amzn-requestid` do API Gateway, portanto, todos os logs dentro de uma solicitação compartilham o mesmo `correlation_id`.
 
-### Environment variables (set in `serverless.yml`)
+### Variáveis de ambiente (definidas em `serverless.yml`)
 
-| Variable | Value | Purpose |
+| Variável | Valor | Finalidade |
 |----------|-------|---------|
-| `POWERTOOLS_SERVICE_NAME` | `lambda-python-datadog` | Tags every log/metric |
-| `POWERTOOLS_LOG_LEVEL` | `INFO` | Minimum log level |
-| `POWERTOOLS_METRICS_NAMESPACE` | `LambdaPythonDatadog` | CloudWatch namespace |
+| `POWERTOOLS_SERVICE_NAME` | `lambda-python-datadog` | Marca cada log/métrica |
+| `POWERTOOLS_LOG_LEVEL` | `INFO` | Nível mínimo de log |
+| `POWERTOOLS_METRICS_NAMESPACE` | `LambdaPythonDatadog` | Namespace CloudWatch |
 
 ---
 
-## Datadog configuration details
+## Detalhes de configuração do Datadog
 
-The `serverless-plugin-datadog` plugin automatically:
+O plugin `serverless-plugin-datadog` faz automaticamente:
 
-1. Attaches the **Datadog Lambda Layer** (contains the Datadog Forwarder & ddtrace).
-2. Sets all required environment variables (`DD_API_KEY`, `DD_SITE`, etc.).
-3. Enables **Enhanced Lambda Metrics** (billed invocations, errors, cold starts, etc.).
-4. Enables **Log correlation** — every log line is tagged with the active `trace_id` / `span_id`.
+1. Anexa a **Camada Datadog Lambda** (contém o Datadog Forwarder & ddtrace).
+2. Define todas as variáveis de ambiente necessárias (`DD_API_KEY`, `DD_SITE`, etc.).
+3. Ativa as **Métricas Lambda Aprimoradas** (invocações faturadas, erros, inicializações frias, etc.).
+4. Ativa a **Correlação de logs** — cada linha de log é marcada com o `trace_id` / `span_id` ativo.
 
-The `TraceMiddleware` in `app/main.py` creates a Datadog APM span for every HTTP request, visible in **APM > Services** in the Datadog UI.
+O `TraceMiddleware` em `app/main.py` cria um span APM Datadog para cada solicitação HTTP, visível em **APM > Services** na interface do Datadog.
 
-### Unified Service Tagging
+### Marcação de Serviço Unificada
 
-The following tags are set automatically from `serverless.yml`:
+As seguintes tags são definidas automaticamente em `serverless.yml`:
 
-| Tag | Value |
+| Tag | Valor |
 |-----|-------|
 | `service` | `lambda-python-datadog` |
-| `env` | Serverless stage (`dev`, `prod`, …) |
-| `version` | `APP_VERSION` env var |
+| `env` | Estágio Serverless (`dev`, `prod`, …) |
+| `version` | Variável de ambiente `APP_VERSION` |
 
 ---
 
-## License
+## Custos da Infraestrutura
+
+Esta aplicação aproveita o **AWS Free Tier** e da camada gratuita de diversos serviços. Abaixo estão os principais custos:
+
+### API Gateway (HTTP API)
+- **$1/million requests** (após os primeiros 300 milhões inclusos no Free Tier)
+
+### AWS CloudWatch
+- **PutLogEvents**: Primeiros 5GB/mês de dados de logs ingeridos são gratuitos
+- **StartQuery**: Primeiros 5GB/mês de dados de logs escaneados por CloudWatch Logs Insights são gratuitos
+- **Storage (ByteHrs)**: Primeiros 5GB-mês de armazenamento de logs são gratuitos
+
+### AWS Lambda
+- **Free Tier**: 1,000,000 de requisições/mês (US East)
+- Após atingir o limite: $0.20 por 1 milhão de requisições
+
+### AWS X-Ray
+- **Free Tier**: 1,000,000 de traces/mês (US East)
+- Após atingir o limite: $5.00 por 1 milhão de traces adicionais
+
+> Para aplicações com baixo/médio tráfego, a maioria dos custos permanecerá dentro do Free Tier.
+
+---
+
+## Licença
 
 [MIT](LICENSE)
