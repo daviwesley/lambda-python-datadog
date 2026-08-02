@@ -29,6 +29,16 @@ AWS Lambda  (Python 3.12)
 
 ---
 
+## Observabilidade com Datadog
+
+A aplicação é totalmente instrumentada com Datadog para monitoramento e rastreamento:
+
+- **APM**: Rastreamentos automáticos de requisições HTTP, chamadas de banco de dados e operações internas
+- **Métricas**: Métricas Enhanced Lambda e métricas customizadas via Powertools
+- **Logs estruturados**: Logs em formato JSON com correlação automática com traces via `DD_LOGS_INJECTION`
+
+---
+
 ## Pré-requisitos
 
 | Ferramenta | Versão | Notas |
@@ -362,6 +372,10 @@ O plugin `serverless-plugin-datadog` faz automaticamente:
 4. Ativa a **correlação de logs** com `trace_id` / `span_id`.
 
 O `TraceMiddleware` em [app/main.py](app/main.py) cria um span APM Datadog para cada solicitação HTTP, visível em **APM > Services** na interface do Datadog.
+
+![Datadog Logs Explorer](docs/img/datadog-logs-explorer.png)
+
+> Exemplo de logs correlacionados com rastreamentos no Datadog Logs Explorer
 
 ### Marcação de Serviço Unificada
 
