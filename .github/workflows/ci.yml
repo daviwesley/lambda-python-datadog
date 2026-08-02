@@ -2,7 +2,12 @@ name: CI
 
 on:
   push:
-    branches: ["**"]
+    branches:
+      - main
+      - develop
+      - "feature/**"
+      - "release/**"
+      - "hotfix/**"
     paths:
       - "app/**"
       - "tests/**"
@@ -10,7 +15,11 @@ on:
       - "pytest.ini"
       - "requirements.txt"
   pull_request:
-    branches: ["**"]
+    branches:
+      - main
+      - develop
+      - "release/**"
+      - "hotfix/**"
     paths:
       - "app/**"
       - "tests/**"

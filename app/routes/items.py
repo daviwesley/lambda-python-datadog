@@ -1,19 +1,35 @@
+from dataclasses import dataclass, field
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from aws_lambda_powertools.logging import Logger
-from aws_lambda_powertools.logging.formatters.datadog import (
-    DatadogLogFormatter,
-)
-
-logger = Logger(logger_formatter=DatadogLogFormatter())
+from app.observability import logger
 
 router = APIRouter(prefix="/items", tags=["items"])
 
-_state: dict[str, object] = {
-    "items": {},
-    "counter": 0,
-}
+
+@dataclass
+class ItemStore:
+    items: dict[int, dict[str, object]] = field(default_factory=dict)
+    counter: int = 0
+
+    def get_item(self, item_id: int) -> dict[str, object] | None:
+        return self.items.get(item_id)
+
+    def create_item(self, payload: "ItemCreate") -> int:
+        self.counter += 1
+        self.items[self.counter] = payload.model_dump()
+        return self.counter
+
+    def delete_item(self, item_id: int) -> None:
+        del self.items[item_id]
+
+    def reset(self) -> None:
+        self.items.clear()
+        self.counter = 0
+
+
+store = ItemStore()
 
 
 class ItemCreate(BaseModel):
@@ -28,7 +44,7 @@ class ItemResponse(ItemCreate):
 
 @router.get("", response_model=list[ItemResponse], summary="List all items")
 def list_items():
-    items = _state["items"]
+    items = store.items
     logger.info("Listing items", extra={"item_count": len(items)})
     return [
         ItemResponse(id=item_id, **item) for item_id, item in items.items()
@@ -39,35 +55,31 @@ def list_items():
     "/{item_id}", response_model=ItemResponse, summary="Get a single item"
 )
 def get_item(item_id: int):
-    items = _state["items"]
-    if item_id not in items:
+    item = store.get_item(item_id)
+    if item is None:
         logger.warning("Item not found", extra={"item_id": item_id})
         raise HTTPException(status_code=404, detail="Item not found")
     logger.info("Fetching item", extra={"item_id": item_id})
-    return ItemResponse(id=item_id, **items[item_id])
+    return ItemResponse(id=item_id, **item)
 
 
 @router.post(
     "", response_model=ItemResponse, status_code=201, summary="Create an item"
 )
 def create_item(payload: ItemCreate):
-    items = _state["items"]
-    counter = int(_state["counter"]) + 1
-    _state["counter"] = counter
-    items[counter] = payload.model_dump()
+    item_id = store.create_item(payload)
     logger.info(
-        "Created item", extra={"item_id": counter, "item_name": payload.name}
+        "Created item", extra={"item_id": item_id, "item_name": payload.name}
     )
-    return ItemResponse(id=counter, **items[counter])
+    return ItemResponse(id=item_id, **store.items[item_id])
 
 
 @router.delete("/{item_id}", status_code=204, summary="Delete an item")
 def delete_item(item_id: int):
-    items = _state["items"]
-    if item_id not in items:
+    if store.get_item(item_id) is None:
         logger.warning(
             "Item not found for deletion", extra={"item_id": item_id}
         )
         raise HTTPException(status_code=404, detail="Item not found")
-    del items[item_id]
+    store.delete_item(item_id)
     logger.info("Deleted item", extra={"item_id": item_id})

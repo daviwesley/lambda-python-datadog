@@ -179,7 +179,7 @@ Dois fluxos de trabalho estão inclusos em `.github/workflows/`:
 | Fluxo de trabalho | Arquivo | Acionador |
 |----------|------|---------|
 | **CI** | `ci.yml` | A cada push e pull request |
-| **Deploy** | `deploy.yml` | Push em `main` → `dev`; tag `v*` → `prod` |
+| **Deploy** | `deploy.yml` | Push em `develop` → `dev`; push em `release/*` ou `hotfix/*` → prerelease `vX.Y.Z-rc.N`; release publicada → `prod` |
 
 ### Segredos necessários do GitHub
 
@@ -203,8 +203,9 @@ Navegue até **Settings → Secrets and variables → Actions → Variables** e 
 ### Fluxo de implantação
 
 ```
-push em main  ─────────────────► implantar em dev  (APP_VERSION = git SHA)
-push tag v1.2.3  ──────────────► implantar em prod (APP_VERSION = v1.2.3)
+push em develop ────────────────► implantar em dev
+push em release/* ou hotfix/* ──► criar prerelease vX.Y.Z-rc.N
+release publicada ─────────────► implantar em prod
 ```
 
 Os trabalhos `dev` e `prod` usam [Ambientes](https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment) do GitHub, portanto, você pode adicionar regras de proteção de implantação (por exemplo, exigir aprovação manual antes de prod).
@@ -266,12 +267,12 @@ Documentação interativa disponível em `/docs` (Swagger UI) e `/redoc`.
 ├── .github/
 │   └── workflows/
 │       ├── ci.yml              # Lint + test a cada push/PR
-│       └── deploy.yml          # Implantar em dev (main) / prod (tags v*)
+│       └── deploy.yml          # Implantar em dev (develop) / prerelease (release/hotfix) / prod (release publicada)
 ├── app/
 │   ├── __init__.py
 │   ├── handler.py          # Ponto de entrada Lambda
 │   ├── main.py             # Fábrica de aplicação FastAPI
-│   ├── powertools.py       # Singletons compartilhados de Logger e Metrics
+│   ├── observability.py    # Logger compartilhado do Powertools
 │   └── routes/
 │       ├── __init__.py
 │       ├── health.py
@@ -296,11 +297,30 @@ Documentação interativa disponível em `/docs` (Swagger UI) e `/redoc`.
 
 ---
 
+## Git Flow e branches remotas
+
+Este repositório segue a convenção do Git Flow descrita na documentação original do modelo:
+
+- `main` é a branch estável de produção.
+- `develop` é a branch de integração para o próximo ciclo.
+- `feature/*` parte de `develop` e volta para `develop`.
+- `release/<versao>` ou `release-<versao>` parte de `develop` e gera prereleases semânticos.
+- `hotfix/<versao>` ou `hotfix-<versao>` parte de `main` e gera prereleases semânticos para correções urgentes.
+
+Para este workflow, as branches remotas precisam existir com esta estrutura base:
+
+- `origin/main`
+- `origin/develop`
+
+As branches `release/*` e `hotfix/*` são temporárias e devem incluir a versão no nome, por exemplo `release/1.1.0` ou `hotfix/1.0.1-login`.
+
+---
+
 ## AWS Lambda Powertools
 
-[AWS Lambda Powertools para Python](https://docs.powertools.aws.dev/lambda/python/latest/) é integrado via `app/powertools.py`, que expõe dois singletons compartilhados importados em toda a aplicação.
+`AWS Lambda Powertools para Python` está centralizado em `app/observability.py`, que expõe o `logger` compartilhado usado por handler e rotas.
 
-Rastreamento é tratado exclusivamente por **Datadog APM** (`ddtrace` + `TraceMiddleware`). O Powertools Tracer / AWS X-Ray não é usado.
+Rastreamento é tratado por **Datadog APM** (`ddtrace` + `TraceMiddleware`). O Powertools Tracer / AWS X-Ray não é usado.
 
 ### Logger
 
@@ -309,39 +329,39 @@ O `Logger` do Powertools substitui o logging stdlib e produz JSON estruturado em
 ```json
 {
   "level": "INFO",
-  "location": "list_items:app/routes/items.py:23",
-  "message": "Listando itens",
+  "location": "list_items:app/routes/items.py:41",
+  "message": "Listing items",
   "item_count": 3,
   "service": "lambda-python-datadog",
   "cold_start": true,
   "function_name": "lambda-python-datadog-dev-api",
-  "correlation_id": "abc-123"
+  "function_arn": "arn:aws:lambda:us-east-1:123456789012:function:lambda-python-datadog-dev-api",
+  "request_id": "b4f0f7c1-1234-5678-90ab-cdef12345678"
 }
 ```
 
-O decorador `@logger.inject_lambda_context` no manipulador adiciona automaticamente `cold_start`, `function_name`, `function_arn` e `request_id` a cada linha de log.  
-O middleware de ID de correlação do FastAPI em `app/main.py` encaminha o cabeçalho `x-amzn-requestid` do API Gateway, portanto, todos os logs dentro de uma solicitação compartilham o mesmo `correlation_id`.
+O decorador `@logger.inject_lambda_context` em [app/handler.py](app/handler.py) adiciona automaticamente `cold_start`, `function_name`, `function_arn` e `request_id` a cada linha de log. Como o `correlation_id_path` está configurado com `correlation_paths.API_GATEWAY_HTTP`, o Powertools também consegue correlacionar o contexto da invocação com a requisição HTTP do API Gateway.
 
-### Variáveis de ambiente (definidas em `serverless.yml`)
+### Variáveis de ambiente
+
+As variáveis abaixo são definidas em [serverless.yml](serverless.yml):
 
 | Variável | Valor | Finalidade |
 |----------|-------|---------|
-| `POWERTOOLS_SERVICE_NAME` | `lambda-python-datadog` | Marca cada log/métrica |
+| `POWERTOOLS_SERVICE_NAME` | `lambda-python-datadog` | Nome do serviço nos logs e métricas |
 | `POWERTOOLS_LOG_LEVEL` | `INFO` | Nível mínimo de log |
-| `POWERTOOLS_METRICS_NAMESPACE` | `LambdaPythonDatadog` | Namespace CloudWatch |
+| `POWERTOOLS_METRICS_NAMESPACE` | `LambdaPythonDatadog` | Namespace das métricas no CloudWatch |
 
----
-
-## Detalhes de configuração do Datadog
+### Integração com Datadog
 
 O plugin `serverless-plugin-datadog` faz automaticamente:
 
-1. Anexa a **Camada Datadog Lambda** (contém o Datadog Forwarder & ddtrace).
-2. Define todas as variáveis de ambiente necessárias (`DD_API_KEY`, `DD_SITE`, etc.).
-3. Ativa as **Métricas Lambda Aprimoradas** (invocações faturadas, erros, inicializações frias, etc.).
-4. Ativa a **Correlação de logs** — cada linha de log é marcada com o `trace_id` / `span_id` ativo.
+1. Anexa a **Camada Datadog Lambda**.
+2. Define variáveis como `DD_API_KEY`, `DD_SITE` e `DD_VERSION` no deploy.
+3. Ativa as **Métricas Lambda Aprimoradas**.
+4. Ativa a **correlação de logs** com `trace_id` / `span_id`.
 
-O `TraceMiddleware` em `app/main.py` cria um span APM Datadog para cada solicitação HTTP, visível em **APM > Services** na interface do Datadog.
+O `TraceMiddleware` em [app/main.py](app/main.py) cria um span APM Datadog para cada solicitação HTTP, visível em **APM > Services** na interface do Datadog.
 
 ### Marcação de Serviço Unificada
 
