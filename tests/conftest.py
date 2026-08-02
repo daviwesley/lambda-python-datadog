@@ -42,6 +42,5 @@ def create_item(client):
 def reset_items_store():
     from app.routes import items as items_module
 
-    items_module._state["items"].clear()
-    items_module._state["counter"] = 0
+    items_module.store.reset()
     yield

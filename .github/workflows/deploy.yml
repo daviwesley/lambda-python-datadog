@@ -3,9 +3,9 @@ name: Deploy
 on:
   push:
     branches:
-      - main
-    tags:
-      - "v*"
+      - develop
+      - "release/**"
+      - "hotfix/**"
     paths-ignore:
       # Documentation files
       - "docs/**"
@@ -18,23 +18,43 @@ on:
       # Configuration files (not needed for deploy)
       - ".editorconfig"
       - ".pre-commit-config.yaml"
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Environment to deploy"
+        required: true
+        type: choice
+        options:
+          - dev
+          - prod
+  release:
+    types:
+      - published
 
 # One deployment at a time — cancel any in-progress run for the same ref.
 concurrency:
   group: deploy-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+  DD_SITE: ${{ vars.DD_SITE || 'datadoghq.com' }}
+
 jobs:
   # ---------------------------------------------------------------------------
-  # Deploy to dev — triggered on every push to main
+  # Deploy to dev — triggered on every push to develop
   # ---------------------------------------------------------------------------
   deploy-dev:
-    if: github.ref == 'refs/heads/main' && github.actor == 'daviwesley'
+    if: |
+      github.actor == github.repository_owner && (
+          (github.event_name == 'push' && github.ref == 'refs/heads/develop') ||
+        (github.event_name == 'workflow_dispatch' && inputs.target == 'dev')
+      )
     name: Deploy → dev
     runs-on: ubuntu-latest
     environment: dev
     permissions:
-      contents: read
+      contents: write
       deployments: write
 
     steps:
@@ -76,20 +96,116 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Deploy to dev
-        run: make deploy STAGE=dev REGION=${{ vars.AWS_REGION || 'us-east-1' }}
+        run: make deploy STAGE=dev REGION=${{ env.AWS_REGION }}
         env:
           DD_API_KEY: ${{ secrets.DD_API_KEY }}
-          DD_SITE: ${{ vars.DD_SITE }}
+          DD_SITE: ${{ env.DD_SITE }}
           APP_VERSION: ${{ github.sha }}
 
   # ---------------------------------------------------------------------------
-  # Deploy to prod — triggered on a semver tag (e.g. v1.2.3)
+  # Create prerelease tags for GitFlow release/hotfix branches
+  # ---------------------------------------------------------------------------
+  create-prerelease:
+    if: |
+      github.actor == github.repository_owner &&
+      github.event_name == 'push' && (
+        startsWith(github.ref, 'refs/heads/release/') ||
+        startsWith(github.ref, 'refs/heads/hotfix/')
+      )
+    name: Create prerelease
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create GitFlow prerelease
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const sha = context.sha;
+            const branchName = context.ref.replace('refs/heads/', '');
+            const branchMatch = branchName.match(
+              /^(release|hotfix)[\/-](?:v)?(\d+\.\d+\.\d+)(?:[\/-].*)?$/i
+            );
+
+            if (!branchMatch) {
+              core.setFailed(
+                `Branch ${branchName} must follow release/<semver> or hotfix/<semver> to create a GitFlow prerelease.`
+              );
+              return;
+            }
+
+            const branchType = branchMatch[1].toLowerCase();
+            const version = branchMatch[2];
+            const tagPrefix = `v${version}-rc.`;
+
+            const releases = await github.paginate(github.rest.repos.listReleases, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 100,
+            });
+
+            const branchReleases = releases
+              .filter((release) => release.tag_name.startsWith(tagPrefix))
+              .sort((left, right) => {
+                const leftRc = Number(left.tag_name.slice(tagPrefix.length));
+                const rightRc = Number(right.tag_name.slice(tagPrefix.length));
+                return rightRc - leftRc;
+              });
+
+            const existingRelease = branchReleases.find((release) => release.target_commitish === sha);
+            if (existingRelease) {
+              core.info(`Release ${existingRelease.tag_name} already exists for ${sha}; skipping.`);
+              return;
+            }
+
+            const nextRc = branchReleases.length > 0
+              ? Number(branchReleases[0].tag_name.slice(tagPrefix.length)) + 1
+              : 1;
+
+            const tagName = `${tagPrefix}${nextRc}`;
+
+            try {
+              await github.rest.repos.getReleaseByTag({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag: tagName,
+              });
+
+              core.info(`Release ${tagName} already exists; skipping.`);
+              return;
+            } catch (error) {
+              if (error.status !== 404) {
+                throw error;
+              }
+            }
+
+            await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: tagName,
+              target_commitish: sha,
+              name: tagName,
+              body: `GitFlow ${branchType} prerelease from ${branchName} at ${sha}`,
+              prerelease: true,
+              draft: false,
+              make_latest: false,
+            });
+
+  # ---------------------------------------------------------------------------
+  # Deploy to prod — triggered when a final release is published
   # ---------------------------------------------------------------------------
   deploy-prod:
-    if: startsWith(github.ref, 'refs/tags/v') && github.actor == 'daviwesley'
+    if: |
+      github.actor == github.repository_owner && (
+        (github.event_name == 'release' && github.event.action == 'published' && github.event.release.prerelease == false) ||
+        (github.event_name == 'workflow_dispatch' && inputs.target == 'prod')
+      )
     name: Deploy → prod
     runs-on: ubuntu-latest
     environment: prod
@@ -135,11 +251,11 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Deploy to prod
-        run: make deploy-prod REGION=${{ vars.AWS_REGION || 'us-east-1' }}
+        run: make deploy-prod REGION=${{ env.AWS_REGION }}
         env:
-          DD_API_KEY: ${{ vars.DD_API_KEY }}
-          DD_SITE: ${{ vars.DD_SITE }}
-          APP_VERSION: ${{ github.ref_name }}
+          DD_API_KEY: ${{ secrets.DD_API_KEY }}
+          DD_SITE: ${{ env.DD_SITE }}
+          APP_VERSION: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.ref_name || github.sha }}

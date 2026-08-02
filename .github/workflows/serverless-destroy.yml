@@ -1,0 +1,64 @@
+name: Serverless Destroy
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Environment to destroy"
+        required: true
+        type: choice
+        options:
+          - dev
+          - prod
+      region:
+        description: "AWS region"
+        required: false
+        default: "us-east-1"
+      confirm:
+        description: "Type DESTROY to confirm stack removal"
+        required: true
+        default: ""
+
+concurrency:
+  group: destroy-${{ github.ref }}-${{ inputs.target }}
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ${{ inputs.region || 'us-east-1' }}
+  DD_SITE: ${{ vars.DD_SITE || 'datadoghq.com' }}
+
+jobs:
+  destroy:
+    if: |
+      github.actor == github.repository_owner &&
+      github.event.inputs.confirm == 'DESTROY'
+    name: Destroy → ${{ inputs.target }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.target }}
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Node.js dependencies
+        run: npm install
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Destroy Serverless stack
+        run: ./scripts/destroy-stack.sh "${{ inputs.target }}" "${{ env.AWS_REGION }}"
+        env:
+          DD_API_KEY: ${{ secrets.DD_API_KEY }}
+          DD_SITE: ${{ env.DD_SITE }}
