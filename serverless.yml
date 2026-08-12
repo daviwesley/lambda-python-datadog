@@ -40,6 +40,7 @@ custom:
     logLevel: "warn"
     addLayers: true
     flushMetricsToLogs: true
+    tags: "env:${self:provider.stage},service:${self:service}"
 
   # Configures throttling settings for the API Gateway stage
   # They apply to all http endpoints, unless specifically overridden
@@ -110,6 +111,9 @@ functions:
   api:
     handler: app.handler.lambda_handler
     description: "FastAPI web application with Datadog observability"
+    tags:
+      service: ${self:service}
+      env: ${self:provider.stage}
     events:
       # AWS Lambda Function URL (no API Gateway cost, simplest setup)
       - httpApi:

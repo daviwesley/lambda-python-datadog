@@ -72,3 +72,18 @@ class TestItems:
     def test_delete_missing_item_returns_404(self, client):
         response = client.delete("/items/999")
         assert response.status_code == 404
+
+    def test_create_item_invalid_price_returns_422(self, client):
+        response = client.post(
+            "/items", json={"name": "Bad Price", "price": -5.0}
+        )
+        assert response.status_code == 422
+
+    def test_create_item_empty_name_returns_422(self, client):
+        response = client.post("/items", json={"name": "", "price": 10.0})
+        assert response.status_code == 422
+
+    def test_get_item_invalid_path_id_returns_422(self, client):
+        response = client.get("/items/0")
+        assert response.status_code == 422
+
