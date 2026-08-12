@@ -69,7 +69,7 @@ provider:
     DD_SERVICE: ${self:service}
     DD_ENV: ${self:provider.stage}
     DD_VERSION: ${env:APP_VERSION, "1.0.0"}
-    DD_LOGS_CONFIG_PROCESSING_RULES: '[{"type": "exclude_at_match", "name": "exclude_start_and_end_logs", "pattern": "(START|END) RequestId"}]'
+    DD_LOGS_CONFIG_PROCESSING_RULES: '[{"type": "exclude_at_match", "name": "exclude_start_and_end_logs", "pattern": "(START|END) RequestId|INIT_START"}]'
 
     # ddtrace runtime behaviour
     DD_TRACE_ENABLED: "true"
